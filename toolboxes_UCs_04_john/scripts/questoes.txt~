@@ -1,0 +1,16 @@
+- count features - sem ele nao esta rodando (e deve ser opcional) e deve enxergar direto o input variable of interest
+
+se nao marcamos count features mas selecionamos o campo counte features (optional), ele roda mesmo assim e gera count features
+
+- campo count features (optional) pode confundir (roda duas analises)
+
+- analina area, count feature e functional area (manter functional? prosa com miltinho)
+
+- output - calcular area total da rosquinha e adicionar uma linha
+(descobrir como calcular a area)
+
+- BUG: depois de rodar uma vez, a analise eh feita somente para o ultimo feature
+
+- gera os shapes: buffer, erase (rosquinha) (=buffer - area original), clip(=rosquinha cruzada com input variable of interest)
+
+- 
