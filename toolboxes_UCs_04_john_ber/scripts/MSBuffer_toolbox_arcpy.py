@@ -13,7 +13,7 @@
  Universidade Estadual Paulista - UNESP
  Rio Claro - SP - Brasil
 
- This script runs inside ArcMap v???? using Python shell.
+ This script runs inside ArcMap v. 10.2.1 using Python shell.
  Usage: ????
 
  Short description
@@ -35,24 +35,26 @@
 """
 #---------------------------------------------------------------------------------------
 
-
+#------------------------------
 # Import modules 
 import arcpy
 from arcpy import env
 import os, sys
 import arcpy.mapping
 
+#------------------------------
 # Name of the geo database where output buffer maps will be saved
 geoDB_name = "output_buffer_maps.gdb"
 # Do we want to overwrite output buffer maps in case the analysis is re-run?
 overwrite_maps = True
 
-
+#------------------------------
 # Reading parameters from the GUI
+
 # Input map
-UCs=arcpy.GetParameterAsText(0) # inputmap ao inves de UCs
-inputCol=arcpy.GetParameterAsText(1)
-inputmap_name=UCs.split("\\")
+inputmap=arcpy.GetParameterAsText(0) # input map
+inputCol=arcpy.GetParameterAsText(1) # column of the input map, correspondent to the variable of interest
+inputmap_name=inputmap.split("\\") # extracting the name of the input map
 inputmap_name=inputmap_name[-1].replace(".shp",'') # name of the input map (without the path)
 
 # Input variable of interest
@@ -94,7 +96,7 @@ OutPutFolder=arcpy.GetParameterAsText(8)
 class MSBuffer(object):
     
     # Initializing parameters
-    def __init__(self,UCs,inputmap_name,variable_interest,OutPutFolder,escale,mult,OutPutTxt,feature_to_count,count_on_off,inputCol):
+    def __init__(self,inputmap,inputmap_name,variable_interest,OutPutFolder,escale,mult,OutPutTxt,feature_to_count,count_on_off,inputCol):
 	
 	self.inpuCol=inputCol #alsdjaslkjdslakj
 	self.list_buffer_scales=[]
@@ -104,7 +106,7 @@ class MSBuffer(object):
 	self.lista_erases=[]
 	self.isArea=''
 	self.isPoint=''
-        self.UCs=UCs
+        self.inputmap=inputmap
 	self.inputmap_name=inputmap_name
         self.variable_interest=variable_interest
         self.OutPutFolder=OutPutFolder
@@ -144,7 +146,7 @@ class MSBuffer(object):
     # Creates a list of features (ID, names, ...) given the input map and the identificator column
     # each component of this list corresponds to a feature of the input map
     def CreateListaFieldReference(self):
-	with arcpy.da.SearchCursor(self.UCs, self.inpuCol) as cursor:
+	with arcpy.da.SearchCursor(self.inputmap, self.inpuCol) as cursor:
 	    for row in cursor:
 		try:
 		    temp=int(row[0])
@@ -191,7 +193,7 @@ class MSBuffer(object):
             formatName=formatName[-5:] # MAXIMUM BUFFER SIZE = 99999
 	    #self.inputmap_name=self.inputmap_name.replace(".shp",'')
             OutPutName=self.inputmap_name+"_buffer_with_inputmap_"+formatName
-            arcpy.Buffer_analysis(self.UCs, OutPutName, i, "FULL", "FLAT", "ALL")
+            arcpy.Buffer_analysis(self.inputmap, OutPutName, i, "FULL", "FLAT", "ALL")
 	listbuffers=arcpy.ListFeatureClasses()
 	self.lista=listbuffers
 	self.pattern="_buffer_with_inputmap_"
@@ -203,7 +205,7 @@ class MSBuffer(object):
     def erase(self):
 	for i in self.listbuffers:
 	    out_name=i.replace("buffer_with_inputmap", "donut_buffer")
-	    arcpy.Erase_analysis(i, self.UCs, out_name, '')   
+	    arcpy.Erase_analysis(i, self.inputmap, out_name, '')   
 	    self.lista_erases.append(out_name)
 	Listerase=arcpy.ListFeatureClasses()
 	self.lista=Listerase
@@ -368,9 +370,9 @@ class MSBuffer(object):
 	
 	
 class principal(MSBuffer):
-    def __init__(self, UCs, inputmap_name, variable_interest, OutPutFolder, escale, mult, 
+    def __init__(self, inputmap, inputmap_name, variable_interest, OutPutFolder, escale, mult, 
                 OutPutTxt, feature_to_count, count_on_off, inputCol):
-	MSBuffer.__init__(self, UCs, inputmap_name, variable_interest, OutPutFolder, escale, mult, 
+	MSBuffer.__init__(self, inputmap, inputmap_name, variable_interest, OutPutFolder, escale, mult, 
 	                  OutPutTxt, feature_to_count, count_on_off, 
 	                  inputCol)
     
@@ -413,7 +415,7 @@ class principal(MSBuffer):
 	    if overwrite_maps == True:
 		MSBuffer.deletefiles(self) ###### colocar if overwrite = True
 		
-	    arcpy.SelectLayerByAttribute_management(self.UCs,"NEW_SELECTION",i)
+	    arcpy.SelectLayerByAttribute_management(self.inputmap,"NEW_SELECTION",i)
 	    MSBuffer.createBuffer(self)
 	    MSBuffer.erase(self)
 	    MSBuffer.count_Features(self)
@@ -435,6 +437,6 @@ class principal(MSBuffer):
 	    
 		    
 	
-fun=principal(UCs, inputmap_name, variable_interest, OutPutFolder, escale, mult, OutPutTxt, 
+fun=principal(inputmap, inputmap_name, variable_interest, OutPutFolder, escale, mult, OutPutTxt, 
              feature_to_count, count_on_off, inputCol)
 fun.run()

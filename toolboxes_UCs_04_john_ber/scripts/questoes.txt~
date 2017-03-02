@@ -13,4 +13,4 @@ se nao marcamos count features mas selecionamos o campo counte features (optiona
 
 - gera os shapes: buffer, erase (rosquinha) (=buffer - area original), clip(=rosquinha cruzada com input variable of interest)
 
-- 
+- problemas quando os mapas sao importados diretamente (sem estar abertos ja no arcgis)
