@@ -58,7 +58,8 @@ inputmap_name = inputmap.split("\\") # extracting the name of the input map
 inputmap_name = inputmap_name[-1].replace(".shp",'') # name of the input map (without the path)
 
 # Input variable of interest
-variable_interest = arcpy.GetParameterAsText(2) # map of the variable of interest
+variables_interest = arcpy.GetParameterAsText(2) # map of the variable of interest
+variable_interest_list = variables_interest.split(';')
 
 # Scale (buffer size in meters)
 scale = arcpy.GetParameterAsText(3)
@@ -92,14 +93,14 @@ OutPutFolder = arcpy.GetParameterAsText(8)
 class MSBuffer(object):
     
     # Initializing parameters
-    def __init__(self, inputmap, inputmap_name, inputCol, variable_interest, OutPutTxt, OutPutFolder,
+    def __init__(self, inputmap, inputmap_name, inputCol, variable_interest_list, OutPutTxt, OutPutFolder,
                  scale, nbuffers, count_on_off, func_area_on_off):	
 	
 	# Input maps and outputs
 	self.inputmap = inputmap # Input map
 	self.inputmap_name = inputmap_name # Name of the input map
 	self.inpuCol = inputCol # column of the input map that identifies the ID of the polygons around which the buffers will be drawn	
-	self.variable_interest = variable_interest # Map correspondent to the variable of interest
+	self.variable_interest_list = variable_interest_list # List of maps correspondent to the variables of interest
 	self.OutPutTxt = OutPutTxt # Prefix of the output file names
 	self.OutPutFolder = OutPutFolder # Folder where text files will be saved
 	
@@ -136,15 +137,19 @@ class MSBuffer(object):
 	self.txtFuncArea = '' # Output file where functional area analysis will be saved
 	self.txtCountFeat = '' # Output file where cont feature analysis will be saved
 	
-	# Names of the output files
-	# Area
-	self.txtArea_name = self.OutPutTxt+"_Area.txt"
-	# Functional area
-	self.txtFuncArea_name = self.OutPutTxt+"_FunctionalArea.txt"
-	# Count feaures
-	self.txtCountFeat_name = self.OutPutTxt+"_Count.txt"
-	
-	arcpy.env.workspace=self.OutPutFolder
+	self.txtArea_name_list = []
+	self.txtFuncArea_name_list = []
+	self.txtCountFeat_name_list = []
+	for var in variable_interest_list:
+	    self.variable_interest_name = var.split("\\")
+	    self.variable_interest_name = self.variable_interest_name[-1].replace(".shp",'') # name of the input map (without the path)	
+	    # Names of the output files
+	    # Area
+	    self.txtArea_name_list.append(self.OutPutTxt+'_'+self.variable_interest_name+"_Area.txt")
+	    # Functional area
+	    self.txtFuncArea_name_list.append(self.OutPutTxt+'_'+self.variable_interest_name+"_FunctionalArea.txt")
+	    # Count feaures
+	    self.txtCountFeat_name_list.append(self.OutPutTxt+'_'+self.variable_interest_name+"_Count.txt")
 	
     #------------------------
     def DefineScale(self):
@@ -220,11 +225,7 @@ class MSBuffer(object):
     def erase(self):
 	for i in self.listbuffers:
 	    out_name=i.replace("buffer_with_inputmap", "donut_buffer")
-	    arcpy.Erase_analysis(i, self.inputmap, out_name, '')
-	    
-	    arcpy.AddField_management(out_name, "area_ha", "DOUBLE", 10, 10)
-	    arcpy.CalculateField_management(out_name, "area_ha", "!shape.area@hectares!","PYTHON_9.3","#")	
-	    # como acessar esse valor e jogar ele numa lista?
+	    arcpy.Erase_analysis(i, self.inputmap, out_name, '')   
 	    #self.lista_erases.append(out_name)
 	Listerased=arcpy.ListFeatureClasses()
 	self.onelist=Listerased
@@ -338,17 +339,47 @@ class MSBuffer(object):
 	
 	return onelistapoio
 	    
+    # Create output header
+    def output_header(self):
 	
+	# Change to output folder
+	os.chdir(self.OutPutFolder)
+    
+	# Initialize output text file for area analysis
+    
+	# Area
+	if self.isArea:
+	    self.txtArea=open(self.txtArea_name_list[self.counter], 'w')
+	    self.txtArea.write(self.inpuCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
+	    self.txtArea.write('\n')
+	    self.txtArea.close()
+    
+	# Functional area
+	if self.isArea and func_area_on_off:
+	    self.txtFuncArea=open(self.txtFuncArea_name_list[self.counter], 'w')
+	    self.txtFuncArea.write(self.inpuCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
+	    self.txtFuncArea.write('\n')
+	    self.txtFuncArea.close()
+    
+	# Count feaures
+	if self.count_on_off:
+	    self.txtCountFeat=open(self.txtCountFeat_name_list[self.counter], 'w')
+	    self.txtCountFeat.write(self.inpuCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
+	    self.txtCountFeat.write('\n')
+	    self.txtCountFeat.close()
+	    
     # This function writes output information in the output text files
     def create_txt_outputs(self):
 	# Polygon ID info
 	idcod = str(self.ListIDcod[self.counter])
     
+	# Change to output folder
+	os.chdir(self.OutPutFolder)	
 	
 	##----------------txtArea------------------------------------------------------
 	#self.listAreaAnalise=MSBuffer.removeDuplicateList(self, self.listAreaAnalise)
 	if self.isArea:
-	    self.txtArea=open(self.txtArea_name, 'a')
+	    self.txtArea=open(self.txtArea_name_list[self.counter_variables], 'a')
 	    self.txtArea.write(idcod+','+','.join(str(x) for x in self.listAreaAnalise))
 	    self.txtArea.write('\n')
 	    self.txtArea.close()	
@@ -357,7 +388,7 @@ class MSBuffer(object):
 	if self.isArea and func_area_on_off:
 	    self.listaAreaFeatures=MSBuffer.removeDuplicateList(self, self.listaAreaFeatures)
 	    ##----------------TXTFunarea------------------------------------------------------
-	    self.txtFuncArea=open(self.txtFuncArea_name, 'a')    
+	    self.txtFuncArea=open(self.txtFuncArea_name_list[self.counter_variables], 'a')    
 	    self.txtFuncArea.write(idcod+','+','.join(str(x) for x in self.listaAreaFeatures))
 	    self.txtFuncArea.write('\n')
 	    self.txtFuncArea.close()	    
@@ -365,7 +396,7 @@ class MSBuffer(object):
 		
 	if self.count_on_off:
 	    self.countList=MSBuffer.removeDuplicateList(self, self.countList)
-	    self.txtCountFeat=open(self.txtCountFeat_name, 'a')
+	    self.txtCountFeat=open(self.txtCountFeat_name_list[self.counter_variables], 'a')
 	    self.txtCountFeat.write(idcod+','+','.join(str(x) for x in self.countList))
 	    self.txtCountFeat.write('\n')
 	    self.txtCountFeat.close()		    
@@ -375,10 +406,10 @@ class MSBuffer(object):
 
 	
 class principal(MSBuffer):
-    def __init__(self, inputmap, inputmap_name, inputCol, variable_interest, OutPutTxt, OutPutFolder,
+    def __init__(self, inputmap, inputmap_name, inputCol, variable_interest_list, OutPutTxt, OutPutFolder,
                  scale, nbuffers, count_on_off, func_area_on_off):
 	
-	MSBuffer.__init__(self, inputmap, inputmap_name, inputCol, variable_interest, OutPutTxt, OutPutFolder,
+	MSBuffer.__init__(self, inputmap, inputmap_name, inputCol, variable_interest_list, OutPutTxt, OutPutFolder,
                  scale, nbuffers, count_on_off, func_area_on_off)
 	
 	# Clear selection of features
@@ -386,9 +417,7 @@ class principal(MSBuffer):
     	
     # Here we run everything!
     def run(self):
-	
-	# Define the geometry of the variable of interest
-	MSBuffer.typeFeature(self)	# parece ter ERRO AQUI!!!    
+ 
 	# Create the list of polygon IDs, from the input map
 	MSBuffer.CreateInputMapIDList(self)
 	# Define the list of buffer sizes
@@ -396,33 +425,20 @@ class principal(MSBuffer):
 	# If the Geodatabase does not exist, create it
 	MSBuffer.createDb(self)
 	
+	# Create output files and write headers for each variable of interest
+	self.counter=0
+	for var_interest in self.variable_interest_list:
+	    self.variable_interest = var_interest
+			
+	    # Define the geometry of the variable of interest
+	    MSBuffer.typeFeature(self)	# parece ter ERRO AQUI!!!   		
+			
+	    # Create output files and write headers
+	    MSBuffer.output_header(self)
+	    
+	    self.counter = self.counter + 1
+	
 	# Analyses
-	
-	# Change to output folder
-	os.chdir(OutPutFolder)
-	
-	# Initialize output text file for area analysis
-	
-	# Area
-	if self.isArea:
-	    self.txtArea=open(self.txtArea_name, 'w')
-	    self.txtArea.write(self.inpuCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
-	    self.txtArea.write('\n')
-	    self.txtArea.close()
-	
-	# Functional area
-	if self.isArea and func_area_on_off:
-	    self.txtFuncArea=open(self.txtFuncArea_name, 'w')
-	    self.txtFuncArea.write(self.inpuCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
-	    self.txtFuncArea.write('\n')
-	    self.txtFuncArea.close()
-	
-	# Count feaures
-	if self.count_on_off:
-	    self.txtCountFeat=open(self.txtCountFeat_name, 'w')
-	    self.txtCountFeat.write(self.inpuCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
-	    self.txtCountFeat.write('\n')
-	    self.txtCountFeat.close()
 	    	    
 	# Initializing counter for getting polygon ID
 	self.counter=0	
@@ -435,22 +451,33 @@ class principal(MSBuffer):
 	    MSBuffer.createBuffer(self)
 	    MSBuffer.erase(self)
 	    
-	    # Count features
-	    if self.count_on_off:
-		MSBuffer.count_Features(self)
-	    # Calculate Functional Area
-	    if self.isArea and self.func_area_on_off:
-		MSBuffer.calc_FuncArea(self)	    
-	
-	    # Calculate Area
-	    if self.isArea:
-		MSBuffer.clip_variable_interest_by_donut_buffer(self)
-		MSBuffer.deletefield(self)
-		MSBuffer.addfield(self)
-		MSBuffer.calculateAreaAnalises(self)
+	    print "olaaaaa"
 	    
-	    # Write outputs
-	    MSBuffer.create_txt_outputs(self)
+	    self.counter_variables = 0
+	    for var_interest in self.variable_interest_list:
+		self.variable_interest = var_interest
+		
+		# Define the geometry of the variable of interest
+		MSBuffer.typeFeature(self)	# parece ter ERRO AQUI!!!
+	    
+		# Count features
+		if self.count_on_off:
+		    MSBuffer.count_Features(self)
+		# Calculate Functional Area
+		if self.isArea and self.func_area_on_off:
+		    MSBuffer.calc_FuncArea(self)	    
+	    
+		# Calculate Area
+		if self.isArea:
+		    MSBuffer.clip_variable_interest_by_donut_buffer(self)
+		    MSBuffer.deletefield(self)
+		    MSBuffer.addfield(self)
+		    MSBuffer.calculateAreaAnalises(self)
+		
+		# Write outputs
+		MSBuffer.create_txt_outputs(self)
+		
+		self.counter_variables += 1
 	    
 	    # Next polygon
 	    self.counter=self.counter+1
@@ -461,6 +488,6 @@ class principal(MSBuffer):
 	    
 		    
 	
-fun=principal(inputmap, inputmap_name, inputCol, variable_interest, OutPutTxt, OutPutFolder,
+fun=principal(inputmap, inputmap_name, inputCol, variable_interest_list, OutPutTxt, OutPutFolder,
                  scale, nbuffers, count_on_off, func_area_on_off)
 fun.run()
