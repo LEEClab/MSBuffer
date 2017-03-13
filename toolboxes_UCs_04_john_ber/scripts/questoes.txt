@@ -30,6 +30,7 @@ workspace??
 
 - funcao typeFeature - incluir polyline e testar
 
+- TESTAR SE PRECISAMOS DA LINHA cursor = arcpy.da.SearchCursor(self.variable_interest, ['FID']) NA FUNCAO DE FUNCTIONAL AREA
 
 
 - variable of interest como multioption
