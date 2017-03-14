@@ -2,7 +2,7 @@
 
 This is a repository for sharing code of the ArcGIS toolbox Multi-Scale Buffer (MSBuffer). It is a free and open source package built as an ArcToolbox in a python script to perform multi-scale spatial analyses for Conservation Unit buffer zones delimitation and management.
 
-LSCorridors was developed and is maintained by the [Spatial Ecology and Conservation Lab](http://leec.eco.br) (LEEC), at Universidade Estadual Paulista, Rio Claro, SP, Brazil.
+MSBuffer was developed and is maintained by the [Spatial Ecology and Conservation Lab](http://leec.eco.br) (LEEC), at Universidade Estadual Paulista, Rio Claro, SP, Brazil.
 
 The repository has 3 folders:
 
