@@ -6,8 +6,8 @@ LSCorridors was developed and is maintained by the [Spatial Ecology and Conserva
 
 The repository has 3 folders:
 
-- [	MSBuffer_v1_00_code: here you can find the main MSBuffer stable script, as well as the ArcGIS toolbox itself.
-- [ old_versions: old versions of the code (before package release).
-- [ Data_test: maps and data for testing and tutorials.
+- MSBuffer_v1_00_code: here you can find the main MSBuffer stable script, as well as the ArcGIS toolbox itself.
+- old_versions: old versions of the code (before package release).
+- Data_test: maps and data for testing and tutorials.
 
 ## How to use
