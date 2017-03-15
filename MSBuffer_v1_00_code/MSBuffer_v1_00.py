@@ -3,11 +3,11 @@
  MSbuffer - MultiScale Buffer Analysis
 
  Bruno P. Leles - brunopleles@gmail.com
+ Bernardo B. S. Niebuhr - bernardo_brandaum@yahoo.com.br
  John W. Ribeiro - jw.ribeiro.rc@gmail.com
  Juliana Silviera dos Santos - juliana.silveiradossantos@gmail.com
  Camila Eboli - 
  Alice C. Hughes - 
- Bernardo B. S. Niebuhr - bernardo_brandaum@yahoo.com.br
  Milton C. Ribeiro - mcr@rc.unesp.br
 
  Universidade Estadual Paulista - UNESP
@@ -18,7 +18,7 @@
  !!!!!!!!!!!!
  Short description
 
- Copyright (C) 2017 by Bruno P. Leles, John W. Ribeiro, and Milton C. Ribeiro.
+ Copyright (C) 2017 by Bruno P. Leles, Bernardo B. S. Niebuhr, John W. Ribeiro, and Milton C. Ribeiro.
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -74,14 +74,20 @@ nbuffers = int(nbuffers)
 count_on_off = arcpy.GetParameterAsText(5) # boolean to count features
 #feature_to_count = variable_interest
 
+# Should we calculate the area or length inside the buffer?
+area_length_on_off = arcpy.GetParameterAsText(6) # boolean to calculate area or length inside the donut buffer
+
 # Should we calculate Functional Area (in case of a polygon variable of interest)?
-func_area_on_off = arcpy.GetParameterAsText(6) # boolean to calculat functional area
+func_area_length_on_off = arcpy.GetParameterAsText(7) # boolean to calculate functional area or length
+
+# Save output maps?
+save_maps = arcpy.GetParameterAsText(8) # boolean to save buffer maps in the geodatabase
 
 # Prefix for output files 
-OutPutTxt = arcpy.GetParameterAsText(7)
+OutPutTxt = arcpy.GetParameterAsText(9)
 
 # Folder for output files
-OutPutFolder = arcpy.GetParameterAsText(8)
+OutPutFolder = arcpy.GetParameterAsText(10)
 
 
 #----------------------------------------------------------------------------------
@@ -90,8 +96,8 @@ OutPutFolder = arcpy.GetParameterAsText(8)
 class MSBuffer(object):
     
     # Initializing parameters
-    def __init__(self, inputmap, inputmap_name, inputCol, variable_interest, variable_interest_name, OutPutTxt, OutPutFolder,
-                 scale, nbuffers, count_on_off, func_area_on_off):	
+    def __init__(self, inputmap, inputmap_name, inputCol, variable_interest, variable_interest_name, OutPutTxt, OutPutFolder, save_maps,
+                 scale, nbuffers, count_on_off, area_length_on_off, func_area_length_on_off):	
 	
 	# Input maps and outputs
 	self.inputmap = inputmap # Input map
@@ -101,12 +107,14 @@ class MSBuffer(object):
 	self.variable_interest_name = variable_interest_name # Name of the variable of interest map
 	self.OutPutTxt = OutPutTxt # Prefix of the output file names
 	self.OutPutFolder = OutPutFolder # Folder where text files will be saved
+	self.save_maps = save_maps # Will buffer maps be saved in the ArcGIS geodatabase?
 	
 	# Parameters
 	self.scale = scale # Scale parameter (minimum buffer size)
 	self.nbuffers = nbuffers # Number of buffers - parameter
 	self.count_on_off = count_on_off # Option: count or not the number of features
-	self.func_area_on_off = func_area_on_off # Option: calculate or not the functional area, in case the variable of interest is of the type "polygon"
+	self.area_length_on_off = area_length_on_off # Option: calculate or not the area/length inside the buffer, in case the variable of interest is of the type "polygon"/"polyline"
+	self.func_area_length_on_off = func_area_length_on_off # Option: calculate or not the functional area/length, in case the variable of interest is of the type "polygon"/"polyline"
 	
 	# Auxiliary variables
 	self.isArea = False # True if the geometry of the variable of interest is Polygon
@@ -123,8 +131,10 @@ class MSBuffer(object):
 	self.referenceListquery = [] # List of queries: SQL expressions used to select each feature of the input map
 	self.listDonutMapAreas = [] # List of total areas of Donut maps (buffer without the input map feature)
 	self.countList = [] # List of number of features inside the donut buffer maps, for each buffer size
-	self.listFunctionalArea = [] # List of functional area of polygons that overlap the donut buffer maps, for each buffer size
 	self.listAreaInsideBuffer = []	# List of area of polygons of the variable of interest that overlap the donut buffer maps, for each buffer size
+	self.listFunctionalArea = [] # List of functional area of polygons that overlap the donut buffer maps, for each buffer size
+	self.listLengthInsideBuffer = [] # List of length of polylines of the variable of interest that overlap the donut buffer maps, for each buffer size
+	self.listFunctionalLength = [] # List of functional length of lines that overlap the donut buffer maps, for each buffer size
 	
 	self.counter = 0 # Counter to identify the elements of the polygon ID list
 	self.onelist = '' # Global Class List to be used by the function selectINlist 
@@ -135,6 +145,8 @@ class MSBuffer(object):
 	# Output files and names
 	self.txtArea = '' # Output file where area analysis will be saved
 	self.txtFuncArea = '' # Output file where functional area analysis will be saved
+	self.txtLength = '' # Output file where length analysis will be saved
+	self.txtFuncLength = '' # Output file where functional length analysis will be saved
 	self.txtCountFeat = '' # Output file where cont feature analysis will be saved
 	self.txtBufferArea = '' # Output file where donut buffer areas will be saved
 	
@@ -143,6 +155,10 @@ class MSBuffer(object):
 	self.txtArea_name = self.OutPutTxt+"_"+self.variable_interest_name+"_Area.txt"
 	# Functional area
 	self.txtFuncArea_name = self.OutPutTxt+"_"+self.variable_interest_name+"_FunctionalArea.txt"
+	# Length
+	self.txtLength_name = self.OutPutTxt+"_"+self.variable_interest_name+"_Length.txt"
+	# Functional length
+	self.txtFuncLength_name = self.OutPutTxt+"_"+self.variable_interest_name+"_FunctionalLength.txt"	
 	# Count feaures
 	self.txtCountFeat_name = self.OutPutTxt+"_"+self.variable_interest_name+"_Count.txt"
 	# Donut buffer area
@@ -210,7 +226,7 @@ class MSBuffer(object):
 	    onelist=arcpy.ListFeatureClasses()
 	    # For each element in the list, deletes the feature and the shapefile
 	    for i in onelist:
-		inp=i.replace(".shp",'')
+		inp = i.replace(".shp", '')
 		arcpy.Delete_management(i)
 		arcpy.Delete_management(inp)
     
@@ -272,9 +288,9 @@ class MSBuffer(object):
 	    
 	# List features in the geodatabase, searches for the buffer ones just created, 
 	# and saves these names in a list called self.listbuffers
-	listbuffers=arcpy.ListFeatureClasses()
-	self.onelist=listbuffers
-	self.pattern="_buffer_with_inputmap_" # Pattern to be found in the map names
+	listbuffers = arcpy.ListFeatureClasses()
+	self.onelist = listbuffers
+	self.pattern = idcod+"_buffer_with_inputmap_" # Pattern to be found in the map names
 	self.listbuffers=MSBuffer.selectInList(self) # Searching for the pattern in map names and defining the list of buffer map names
     
     
@@ -287,6 +303,9 @@ class MSBuffer(object):
 	It also defines a list of donut buffer map names called self.Listerased, 
 	and a list of donut buffer map areas called self.listDonutMapAreas.
 	'''
+	
+	# Polygon ID info, for saving it in the buffer map name
+	idcod = str(self.ListIDcod[self.counter])	
 	
 	# For each map in the list of buffer map names
 	for i in self.listbuffers:
@@ -308,10 +327,10 @@ class MSBuffer(object):
 	    
 	# List features in the geodatabase, searches for the donut buffer ones just created, 
 	# and saves these names in a list called self.Listerased
-	Listerased=arcpy.ListFeatureClasses()
-	self.onelist=Listerased
-	self.pattern="_donut_buffer_" # Pattern to be found in the map names
-	self.Listerased=MSBuffer.selectInList(self) # Searching for the pattern in map names and defining the list of donut buffer map names
+	Listerased = arcpy.ListFeatureClasses()
+	self.onelist = Listerased
+	self.pattern = idcod+"_donut_buffer_" # Pattern to be found in the map names
+	self.Listerased = MSBuffer.selectInList(self) # Searching for the pattern in map names and defining the list of donut buffer map names
 	
     
     def typeFeature(self):
@@ -332,11 +351,11 @@ class MSBuffer(object):
 	# If the geometryType is Polygon:
 	if geometryType == 'Polygon':
 	    self.isPoint = False # Variable type is not Point
-	    #self.isLine = False
+	    self.isLine = False # Variable type is not Line
 	    self.isArea = True # Defines the variable type as Area
 	    
 	    # If the Functional Area is to be calculated, calculate the area of the polygons of the variable of interest map
-	    if self.func_area_on_off:
+	    if self.func_area_length_on_off:
 		try:
 		    # Add field "area_ha" to the variable of interest map
 		    arcpy.AddField_management(self.variable_interest, "area_ha", "DOUBLE", 10, 10)
@@ -344,7 +363,7 @@ class MSBuffer(object):
 		    arcpy.CalculateField_management(self.variable_interest, "area_ha", "!shape.area@hectares!","PYTHON_9.3","#")
 		    
 		    #arcpy.CalculateField_management(self.variable_interest, "area_ha", "!shape.area@squaremeters!","PYTHON_9.3","#")
-		    #expression="!Area_ha!/10000" # Area_ha ou area_ha? "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+		    #expression="!Area_ha!/10000" # Area_ha ou area_ha? 
 		    #arcpy.CalculateField_management(self.variable_interest,"area_ha",expression,"PYTHON_9.3","#")		
 		except Exception as e:
 		    pass
@@ -352,9 +371,22 @@ class MSBuffer(object):
 	# If the geometryType is Polygon:
 	elif geometryType == 'Point' or geometryType == 'Multipoint':
 	    self.isArea = False # Variable type is not Area
-	    #self.isLine = False
+	    self.isLine = False # Variable type is not Line
 	    self.isPoint = True # Defines the variable as Point
-	# WHAT ABOUT LINES!!??
+	elif geometryType == 'Polyline':
+	    self.isArea = False # Variable type is not Area
+	    self.isPoint = False # Variable type is not Point 
+	    self.isLine = True # Defines the variable as Line
+	    
+	    # If the Functional Lenth is to be calculated, calculate the length of the lines of the variable of interest map
+	    if self.func_area_length_on_off:
+		try:
+		    # Add field "length_m" to the variable of interest map
+		    arcpy.AddField_management(self.variable_interest, "length_m", "DOUBLE", 10, 10)
+		    # Calculate the length of the features within the map variable of interest, in meters
+		    arcpy.CalculateField_management(self.variable_interest, "length_m", "!shape.length@meters!","PYTHON_9.3","#")
+		except Exception as e: 
+		    pass
 	
 	
     def countFeatures(self):
@@ -384,16 +416,17 @@ class MSBuffer(object):
 	    self.countList.append(count)	  	    
 	    
 	     
-    def calcFunctionalArea(self):
+    def calcFunctionalArea_Length(self):
 	'''
-	Function calcFunctionalArea
+	Function calcFunctionalArea_Length
 	
-	This function calculates the functional area of the variable of interest, in case its type is Area,
-	for all buffer sizes. The values for each buffer size is saved in the list self.listFunctionalArea.
+	This function calculates the functional area (for polygons) or length (for lines) of the variable of interest,
+	for all buffer sizes. The values for each buffer size is saved in the list self.listFunctionalArea (for polygons)
+	or self.listFunctionalLength (for lines).
 	
 	Details: the function checks the features of the variable of interest that overlaps the donut buffer map,
-	and sum the complete area of these features (not only the area iside the buffer). 
-	This summed area is here called functional area.
+	and sum the complete area/length of these features (not only the area/length iside the buffer). 
+	This summed area/length is here called functional area/length.
 	'''
 	
 	# For each map in the donut buffer list:
@@ -401,15 +434,29 @@ class MSBuffer(object):
 	    # Select the features in the variable of interest map that intersects with the donut buffer
 	    arcpy.SelectLayerByLocation_management(self.variable_interest, "INTERSECT", donut) # para calcular functional area??????????????
 	    
-	    # Retrieving the area (in hectares) of each selected feature
-	    with arcpy.da.SearchCursor(self.variable_interest, "area_ha") as cursor:
-		# Initializing the total area
-		summed_total=0
-		# For each polygon area
-		for row in cursor:
-		    summed_total = summed_total + row[0] # Sum the polygon area to the total area
-		summed_total = round(summed_total, ndigits=2) # Round the total area to 2 digits
-		self.listFunctionalArea.append(summed_total) # Appends the total functional area to the list of functional areas for each buffer size
+	    # If the map is an Area map, calculate functional area
+	    if self.isArea == True:
+		# Retrieving the area (in hectares) of each selected feature
+		with arcpy.da.SearchCursor(self.variable_interest, "area_ha") as cursor:
+		    # Initializing the total area
+		    summed_total=0
+		    # For each polygon area
+		    for row in cursor:
+			summed_total = summed_total + row[0] # Sum the polygon area to the total area
+		    summed_total = round(summed_total, ndigits=2) # Round the total area to 2 digits
+		    self.listFunctionalArea.append(summed_total) # Appends the total functional area to the list of functional areas for each buffer size
+		    
+	    # If the map is a Line map, calculate functional length
+	    elif self.isLine == True:
+		# Retrieving the length (in meters) of each selected feature
+		with arcpy.da.SearchCursor(self.variable_interest, "length_m") as cursor:
+		    # Initializing the total length
+		    summed_total=0
+		    # For each line length
+		    for row in cursor:
+			summed_total = summed_total + row[0] # Sum the line length to the total length
+		    summed_total = round(summed_total, ndigits=2) # Round the total area to 2 digits
+		    self.listFunctionalLength.append(summed_total) # Appends the total functional length to the list of functional lengths for each buffer size		
    
 	
     def clip_variable_interest_by_donut_buffer(self):
@@ -419,6 +466,9 @@ class MSBuffer(object):
 	This function clips the map of the variable of interest inside the donut buffer area.
 	It also defines a list of names of variable of interest map inside the donut buffers, called self.listclip
 	'''
+	
+	# Polygon ID info, for saving it in the buffer map name
+	idcod = str(self.ListIDcod[self.counter])	
 	
 	# For each donut buffer map:
 	for i in self.Listerased:
@@ -431,7 +481,7 @@ class MSBuffer(object):
 	# and saves these names in a list called self.listclip	
 	Listclip = arcpy.ListFeatureClasses()
 	self.onelist = Listclip
-	self.pattern = self.variable_interest_name+"_inside_donut_buffer_" # Pattern to be found in the map names
+	self.pattern = idcod+"_"+self.variable_interest_name+"_inside_donut_buffer_" # Pattern to be found in the map names
 	self.listclip = MSBuffer.selectInList(self) # Searching for the pattern in map names and defining the list of CLIP map names
 		    
     
@@ -476,6 +526,8 @@ class MSBuffer(object):
 	This function calculates the area (in hectares) of each feature of the clip map (i.e. the features 
 	of the variable of interest inside the donut buffer map) and adds this value to 
 	the attribute table field "Area_ha" inside the clip map
+	
+	# change to implement length calculation
 	'''
 	
 	# For each CLIP map
@@ -493,12 +545,14 @@ class MSBuffer(object):
 		print "pass"
     
     
-    def calculateAreaInsideBuffer(self):
+    def calculateArea_LengthInsideBuffer(self):
 	'''
-	Function calculateAreaInsideBuffer
+	Function calculateArea_LengthInsideBuffer
 	
-	This function retrieves he values of the features of the variable of interest inside the 
-	donut buffer, sums it and writes it into the list self.listAreaInsideBuffer.
+	This function retrieves the values of the feature areas (in case of polygons) or 
+	lengths (in case of polylines) of the variable of interest inside the donut buffer, 
+	sums it and writes it into the list self.listAreaInsideBuffer (polygons) or self.listLengthInsideBuffer (Lines).
+	It works only for Polygon and Polyline shapefiles.
 	'''
 	
 	# For each CLIP map:
@@ -506,16 +560,29 @@ class MSBuffer(object):
 	    # Initializes the total area of the variable of interest inside the donut buffer
 	    summed_total = 0 
 	    
-	    # For each polygon in the CLIP map:
-	    with arcpy.da.SearchCursor(i, "Shape_Area") as cursor: # Uses the "Shape_Area" column, created when the clip map is created
-	    #with arcpy.da.SearchCursor(i, "Area_clip_ha") as cursor: # This is in the case of calculating the area of each polygon
-		# Sum the polygon area of the variable of interest to the total area
-		for row in cursor:
-		    summed_total = summed_total + row[0]
-		summed_total = summed_total/10000 # This calculation is based on the "Shape_Area" column; if "Area_clip_ha" is used, this must be removed.
-		summed_total = round(summed_total, ndigits = 2) # Rounds the value to two digits
-		self.listAreaInsideBuffer.append(summed_total) # Appends it to the list of areas inside the donut buffer
-
+	    # If the map geometry is polygon:
+	    if self.isArea:
+		# For each polygon in the CLIP map:
+		with arcpy.da.SearchCursor(i, "Shape_Area") as cursor: # Uses the "Shape_Area" column, created when the clip map is created
+		#with arcpy.da.SearchCursor(i, "Area_clip_ha") as cursor: # This is in the case of calculating the area of each polygon
+		    # Sum the polygon area of the variable of interest to the total area
+		    for row in cursor:
+			summed_total = summed_total + row[0]
+		    summed_total = summed_total/10000 # This calculation is based on the "Shape_Area" column; if "Area_clip_ha" is used, this must be removed.
+		    summed_total = round(summed_total, ndigits = 2) # Rounds the value to two digits
+		    self.listAreaInsideBuffer.append(summed_total) # Appends it to the list of areas inside the donut buffer
+		    
+	    # If the map geometry is polyline:
+	    elif self.isLine:
+		# For each line in the CLIP map:
+		with arcpy.da.SearchCursor(i, "Shape_Length") as cursor: # Uses the "Shape_Length" column, created when the clip map is created
+		    # Sum the line length of the variable of interest to the total length
+		    for row in cursor:
+			summed_total = summed_total + row[0]
+		    #summed_total = summed_total/1000 # For kilometers, not used
+		    summed_total = round(summed_total, ndigits = 2) # Rounds the value to two digits
+		    self.listLengthInsideBuffer.append(summed_total) # Appends it to the list of lengths inside the donut buffer	    
+		
     
     def removeDuplicateList(self, onelist):
 	'''
@@ -544,19 +611,33 @@ class MSBuffer(object):
 	'''
 	
 	# Area
-	if self.isArea:
+	if self.isArea and self.area_length_on_off:
 	    self.txtArea = open(self.txtArea_name, 'w')
 	    self.txtArea.write(self.inputCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
 	    self.txtArea.write('\n')
 	    self.txtArea.close()
 	
 	# Functional area
-	if self.isArea and func_area_on_off:
+	if self.isArea and self.func_area_length_on_off:
 	    self.txtFuncArea = open(self.txtFuncArea_name, 'w')
 	    self.txtFuncArea.write(self.inputCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
 	    self.txtFuncArea.write('\n')
 	    self.txtFuncArea.close()
-	
+	    
+	# Length
+	if self.isLine and self.area_length_on_off:
+	    self.txtLength = open(self.txtLength_name, 'w')
+	    self.txtLength.write(self.inputCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
+	    self.txtLength.write('\n')
+	    self.txtLength.close()
+    
+	# Functional area
+	if self.isLine and self.func_area_length_on_off:
+	    self.txtFuncLength = open(self.txtFuncLength_name, 'w')
+	    self.txtFuncLength.write(self.inputCol+','+','.join(str(x) for x in self.list_buffer_scales)) # File header
+	    self.txtFuncLength.write('\n')
+	    self.txtFuncLength.close()	
+    
 	# Count feaures
 	if self.count_on_off:
 	    self.txtCountFeat = open(self.txtCountFeat_name, 'w')
@@ -585,7 +666,7 @@ class MSBuffer(object):
 	# AREA INSIDE BUFFER
 	# Appends one line (one feature of the input map) with the Area inside the Buffer to the output text file
 	#self.listAreaInsideBuffer=MSBuffer.removeDuplicateList(self, self.listAreaInsideBuffer)
-	if self.isArea:
+	if self.isArea and self.area_length_on_off:
 	    self.txtArea = open(self.txtArea_name, 'a')
 	    self.txtArea.write(idcod+','+','.join(str(x) for x in self.listAreaInsideBuffer))
 	    self.txtArea.write('\n')
@@ -594,13 +675,33 @@ class MSBuffer(object):
 	
 	# FUNCTIONAL AREA
 	# Appends one line (one feature of the input map) with the Functional Area to the output text file
-	if self.isArea and func_area_on_off:
+	if self.isArea and self.func_area_length_on_off:
 	    self.listFunctionalArea = MSBuffer.removeDuplicateList(self, self.listFunctionalArea)
 	    self.txtFuncArea = open(self.txtFuncArea_name, 'a')    
 	    self.txtFuncArea.write(idcod+','+','.join(str(x) for x in self.listFunctionalArea))
 	    self.txtFuncArea.write('\n')
 	    self.txtFuncArea.close()	    
-	    self.listFunctionalArea = []	
+	    self.listFunctionalArea = []
+	    
+	# LENGTH INSIDE BUFFER
+	# Appends one line (one feature of the input map) with the Length inside the Buffer to the output text file
+	#self.listAreaInsideBuffer=MSBuffer.removeDuplicateList(self, self.listAreaInsideBuffer)
+	if self.isLine and self.area_length_on_off:
+	    self.txtLength = open(self.txtLength_name, 'a')
+	    self.txtLength.write(idcod+','+','.join(str(x) for x in self.listLengthInsideBuffer))
+	    self.txtLength.write('\n')
+	    self.txtLength.close()	
+	    self.listLengthInsideBuffer = []
+	
+	# FUNCTIONAL AREA
+	# Appends one line (one feature of the input map) with the Functional Area to the output text file
+	if self.isLine and self.func_area_length_on_off:
+	    self.listFunctionalLength = MSBuffer.removeDuplicateList(self, self.listFunctionalLength)
+	    self.txtFuncLength = open(self.txtFuncLength_name, 'a')    
+	    self.txtFuncLength.write(idcod+','+','.join(str(x) for x in self.listFunctionalLength))
+	    self.txtFuncLength.write('\n')
+	    self.txtFuncLength.close()	    
+	    self.listFunctionalLength = []	
 		
 	# COUNT FEATURES
 	# Appends one line (one feature of the input map) with the count of features inside the donut buffer
@@ -628,11 +729,19 @@ class MSBuffer(object):
 class Run(MSBuffer):
     
     # Initializing parameters
-    def __init__(self, inputmap, inputmap_name, inputCol, variable_interest, variable_interest_name, OutPutTxt, OutPutFolder,
-                 scale, nbuffers, count_on_off, func_area_on_off):
+    def __init__(self, inputmap, inputmap_name, inputCol, variable_interest, variable_interest_name, OutPutTxt, OutPutFolder, save_maps,
+                 scale, nbuffers, count_on_off, area_length_on_off, func_area_length_on_off):
 	
-	MSBuffer.__init__(self, inputmap, inputmap_name, inputCol, variable_interest, variable_interest_name, OutPutTxt, OutPutFolder,
-                 scale, nbuffers, count_on_off, func_area_on_off)
+	if not (count_on_off or area_length_on_off or func_area_length_on_off):
+	    string_error = "At least one of the options must be selected:\n" + \
+		"Count Features\nCalculate Area/Length\nCalculate Functional Area/Length\n\n" + \
+		"Please, select one of them and try again!"
+	    
+	    raise Exception(string_error)
+	
+	
+	MSBuffer.__init__(self, inputmap, inputmap_name, inputCol, variable_interest, variable_interest_name, OutPutTxt, OutPutFolder, save_maps,
+                 scale, nbuffers, count_on_off, area_length_on_off, func_area_length_on_off)
 	
 	# Clear selection of features
 	arcpy.SelectLayerByAttribute_management(self.inputmap, "CLEAR_SELECTION")	
@@ -664,18 +773,17 @@ class Run(MSBuffer):
 	
 	# Initialize output text file for area analysis
 	MSBuffer.initializeOutputTxt(self)
-	    	    
+	
+	# If the maps will be saved, the previous maps inside the geodatabase may be deleted
+	# Delete previous files from the geodatabase, to perform new analysis
+	if overwrite_maps == True:
+	    MSBuffer.deleteFiles(self)	    
+		
 	# Initializing counter for getting polygon ID from the input map (around which buffers are drawn)
 	self.counter = 0	
 	
 	# For each feature in the input map:
 	for i in self.referenceListquery:
-	    
-	    # Delete previous files from the geodatabase, to perform new analysis
-	    # ISSO DEVE ESTAR AQUI OU FORA DAQUI?? EH PRA MANTER SOMENTE PARA UM FEATURE???
-	    #####################
-	    if overwrite_maps == True:
-		MSBuffer.deleteFiles(self)
 		
 	    # Select the feature from the input map
 	    arcpy.SelectLayerByAttribute_management(self.inputmap, "NEW_SELECTION", i)
@@ -688,11 +796,11 @@ class Run(MSBuffer):
 	    if self.count_on_off:
 		MSBuffer.countFeatures(self)
 	    # Calculate Functional Area
-	    if self.isArea and self.func_area_on_off:
-		MSBuffer.calcFunctionalArea(self)	    
+	    if (self.isArea or self.isLine) and self.func_area_length_on_off:
+		MSBuffer.calcFunctionalArea_Length(self)	    
 	
 	    # Calculate Area
-	    if self.isArea:
+	    if (self.isArea or self.isLine) and self.area_length_on_off:
 		MSBuffer.clip_variable_interest_by_donut_buffer(self)
 		# The functions deleteField and addField, which delete the area column and recalculates it, are not being used,
 		# since the area of polygons of the variable of interest inside the donut buffer are calculated through the "Shape_Area" column,
@@ -700,10 +808,10 @@ class Run(MSBuffer):
 		# However, the implementation may change, if needed. We keep the functions declared in case it is necessary
 		#MSBuffer.deleteField(self)
 		#MSBuffer.addField(self)
-		MSBuffer.calculateAreaInsideBuffer(self)
+		MSBuffer.calculateArea_LengthInsideBuffer(self)
 	    
 	    # Write outputs
-	    MSBuffer.createOutputTxt(self)
+	    MSBuffer.createOutputTxt(self)	    
 	    
 	    # Next input map feature
 	    self.counter = self.counter + 1
@@ -712,12 +820,17 @@ class Run(MSBuffer):
 	# Clear selection
 	arcpy.SelectLayerByAttribute_management(self.inputmap, "CLEAR_SELECTION")
 	
+	# If the maps will not be saved, delete them
+	if not self.save_maps:
+	    ## Delete files from the geodatabase
+	    MSBuffer.deleteFiles(self)	
+	
 	    
 #----------------------------------------------------------------------------------
 # Running the analysis
 	
 # Run instance
-run_instance = Run(inputmap, inputmap_name, inputCol, variable_interest, variable_interest_name, OutPutTxt, OutPutFolder,
-                   scale, nbuffers, count_on_off, func_area_on_off)
+run_instance = Run(inputmap, inputmap_name, inputCol, variable_interest, variable_interest_name, OutPutTxt, OutPutFolder, save_maps,
+                   scale, nbuffers, count_on_off, area_length_on_off, func_area_length_on_off)
 # Run
 run_instance.run()
