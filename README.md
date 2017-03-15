@@ -12,9 +12,9 @@ The repository has 3 folders:
 
 ## How to use
 
-MSBuffer runs as a ArcToolbox, therefore you should first install ArcGIS in your computer. You download and find installation procedures [here](http://www.esri.com/en/arcgis/products/arcgis-pro/DesktopFreeTrial) and [here](http://desktop.arcgis.com/en/arcmap/10.3/get-started/installation-guide/installing-on-your-computer.htm)
+MSBuffer runs as a ArcToolbox, therefore you should first install ArcGIS in your computer. You can download and find installation procedures for ArcGIS [here](http://www.esri.com/en/arcgis/products/arcgis-pro/DesktopFreeTrial) and [here](http://desktop.arcgis.com/en/arcmap/10.3/get-started/installation-guide/installing-on-your-computer.htm)
 
-###Adding  MSBuffer as ArcToolbox inside ArcMap.
+###Adding  MSBuffer as an ArcToolbox inside ArcMap.
 - Open ArcMap with an empty map document file and open the ArcToolbox window.
 - Right-click on ArcToolbox> Add toolbox and navigate to the folder where you have saved to MSBuffer.
 - Open the toolbox by selecting MSBuffer.tbx and clicking on the Open button. The MSBuffer should now be displayed in ArcToolbox.
