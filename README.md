@@ -1,6 +1,7 @@
 # MSBuffer
 
-This is a repository for sharing code of the ArcGIS toolbox Multi-Scale Buffer (MSBuffer). It is a free and open source package built as an ArcToolbox in a python script to perform multi-scale spatial analyses for Conservation Unit buffer zones delimitation and management.
+This is a repository for sharing code of the ArcGIS toolbox Multi-Scale Buffer (MSBuffer). It is a free and open source package built as an ArcToolbox in Python to perform multi-scale spatial analyses for Conservation Unit buffer zones delimitation and management.
+MSBuffer tool performs area and length calculation and feature counting in buffers of multiples buffer sizes around of an area of interest.
 
 MSBuffer was developed and is maintained by the [Spatial Ecology and Conservation Lab](http://leec.eco.br) (LEEC), at Universidade Estadual Paulista, Rio Claro, SP, Brazil.
 

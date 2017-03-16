@@ -15,8 +15,11 @@
 
  This script runs inside ArcMap v. 10.2.1 using Python 2.7.
 .
- !!!!!!!!!!!!
- Short description
+ The Multi-Scale Buffer (MSBuffer) is a free and open source package developed in the Python 2.7 
+ as an ArcGIS geoprocessing tool. It that performs area/length calculation and feature counting in buffers 
+ of multiple sizes around of an area of interest.
+ 
+ Usage: Take a look at the online tutorial at https://github.com/LEEClab/MSBuffer.
 
  Copyright (C) 2017 by Bruno P. Leles, Bernardo B. S. Niebuhr, John W. Ribeiro, and Milton C. Ribeiro.
 
