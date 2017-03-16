@@ -40,10 +40,10 @@ MSBuffer runs as a ArcToolbox, therefore you should first install ArcGIS in your
 
 ## Authors
 
-Bruno P. Leles <brunopleles@gmail.com>  
-Bernardo B. S. Niebuhr <bernardo_brandaum@yahoo.com.br>  
-John W. Ribeiro <jw.ribeiro.rc@gmail.com>  
-Milton C. Ribeiro <mcr@rc.unesp.br>
+Bruno P. Leles <<brunopleles@gmail.com>>  
+Bernardo B. S. Niebuhr <<bernardo_brandaum@yahoo.com.br>>  
+John W. Ribeiro <<jw.ribeiro.rc@gmail.com>>  
+Milton C. Ribeiro <<mcr@rc.unesp.br>>
 
 ## Citation
 
