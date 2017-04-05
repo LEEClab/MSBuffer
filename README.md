@@ -7,9 +7,13 @@ MSBuffer was developed and is maintained by the [Spatial Ecology and Conservatio
 
 The repository has 3 folders:
 
-- [MSBuffer_v1_00_code](https://github.com/LEEClab/MSBuffer/tree/master/MSBuffer_v1_00_code): here you can find the main MSBuffer stable script, as well as the ArcGIS toolbox itself.
-- [old_versions](https://github.com/LEEClab/MSBuffer/tree/master/old_version): old versions of the code (before package release).
-- [Data_test](https://github.com/LEEClab/MSBuffer/tree/master/Data_test): maps and data for testing and tutorials.
+- [MSBuffer_v1_0_0](https://github.com/LEEClab/MSBuffer/tree/master/MSBuffer_v1_0_0): here you can find the main MSBuffer stable script, as well as the ArcGIS toolbox itself.
+- [old_versions](https://github.com/LEEClab/MSBuffer/tree/master/old_versions): old versions of the code (before package release).
+- [Maps_tutorial](https://github.com/LEEClab/MSBuffer/tree/master/Maps_tutorial): maps and data for testing and tutorials.
+
+For more information on how to use and how it works, take a look at the [pdf tutorial](https://github.com/LEEClab/MSBuffer/blob/master/Supplemental_Material%201_MSBuffer_tutorial.pdf) or at out [wiki](https://github.com/LEEClab/MSBuffer/wiki).
+
+
 
 ## How to use
 
