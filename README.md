@@ -11,7 +11,7 @@ The repository has 3 folders:
 - [old_versions](https://github.com/LEEClab/MSBuffer/tree/master/old_versions): old versions of the code (before package release).
 - [Maps_tutorial](https://github.com/LEEClab/MSBuffer/tree/master/Maps_tutorial): maps and data for testing and tutorials.
 
-For more information on how to use and how it works, take a look at the [pdf tutorial](https://github.com/LEEClab/MSBuffer/blob/master/Supplemental_Material%201_MSBuffer_tutorial.pdf) or at out [wiki](https://github.com/LEEClab/MSBuffer/wiki).
+For more information on how to use and how it works, take a look at the [pdf tutorial](https://github.com/LEEClab/MSBuffer/blob/master/Supplemental_Material%201_MSBuffer_tutorial.pdf) or at our [wiki](https://github.com/LEEClab/MSBuffer/wiki).
 
 
 
